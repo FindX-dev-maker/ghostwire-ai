@@ -47,9 +47,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": url.origin, "access-control-allow-methods": "GET,POST,DELETE,OPTIONS", "access-control-allow-headers": "content-type" } });
-    if (url.pathname.startsWith("/api/") && !env.DB) return json({ error: "Backend database is not configured yet. Create and bind the Ghostwire D1 database before using accounts or property listings." }, 503);
-
-    if (url.pathname === "/api/health" && request.method === "GET") return json({ status: "ok", database: Boolean(env.DB) });
+    if (url.pathname === "/api/health" && request.method === "GET") return json({ status: "ok", database: Boolean(env.DB), assistantConfigured: Boolean(env.XAI_API_KEY) });
+    if (url.pathname.startsWith("/api/") && !env.DB && !url.pathname.startsWith("/api/assistant/")) return json({ error: "Backend database is not configured. Check the Ghostwire D1 binding." }, 503);
 
     if (url.pathname === "/api/auth/signup" && request.method === "POST") {
       const data = await body(request);
@@ -82,6 +81,50 @@ export default {
     if (url.pathname === "/api/auth/me" && request.method === "GET") {
       const user = await currentUser(request,env.DB);
       return user ? json({ user }) : json({ user:null },401);
+    }
+
+    if (url.pathname === "/api/assistant/chat" && request.method === "POST") {
+      if (!env.XAI_API_KEY) return json({ error: "Ghostwire Assistant is not connected yet. The XAI_API_KEY secret is missing." }, 503);
+      const user = env.DB ? await currentUser(request, env.DB) : null;
+      if (!user) return json({ error: "Sign in to use Ghostwire Assistant." }, 401);
+      const data = await body(request);
+      if (!data || !Array.isArray(data.messages) || data.messages.length < 1 || data.messages.length > 12) return json({ error: "Send between 1 and 12 recent messages." }, 400);
+      const messages = [];
+      for (const item of data.messages) {
+        if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 4000) return json({ error: "Each message must contain valid text of up to 4,000 characters." }, 400);
+        messages.push({ role: item.role, content: item.content.trim() });
+      }
+      if (messages[messages.length - 1].role !== "user") return json({ error: "The last message must be from you." }, 400);
+      try {
+        const upstream = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { "authorization": `Bearer ${env.XAI_API_KEY}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            model: env.XAI_MODEL || "grok-4.7",
+            messages: [
+              { role: "system", content: "You are Ghostwire Assistant, the official AI assistant inside Ghostwire AI, a software division of Ghostwire Syndicate. Be helpful, accurate, practical and clear. Do not claim to execute trades, move money, access accounts, publish properties or perform external actions unless an enabled tool actually does so. For financial topics, explain risks and never promise returns." },
+              ...messages
+            ],
+            temperature: 0.7,
+            max_tokens: 1200
+          }),
+          signal: AbortSignal.timeout(45000)
+        });
+        const result = await upstream.json().catch(() => ({}));
+        if (!upstream.ok) {
+          const message = upstream.status === 401 || upstream.status === 403
+            ? "The Grok API rejected the configured key. Check the XAI_API_KEY secret."
+            : upstream.status === 429
+              ? "The Grok API rate limit or account quota was reached. Check your xAI API credits and limits."
+              : "Grok could not complete the request. Please try again shortly.";
+          return json({ error: message }, upstream.status === 429 ? 429 : 502);
+        }
+        const answer = result.choices?.[0]?.message?.content;
+        if (typeof answer !== "string" || !answer.trim()) return json({ error: "Grok returned an empty response. Please try again." }, 502);
+        return json({ answer: answer.trim(), model: result.model || env.XAI_MODEL || "grok-4.7" });
+      } catch (error) {
+        return json({ error: error?.name === "TimeoutError" ? "Grok took too long to respond. Please try again." : "Could not reach the Grok API. Check the Worker network request and try again." }, 502);
+      }
     }
 
     if (url.pathname === "/api/properties" && request.method === "GET") {
