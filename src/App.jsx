@@ -10,6 +10,43 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState('signup');
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMessage, setAuthMessage] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [propertyMessage, setPropertyMessage] = useState('');
+  const [propertyBusy, setPropertyBusy] = useState(false);
+
+  const submitAuth = async (event) => {
+    event.preventDefault(); setAuthBusy(true); setAuthMessage('');
+    try {
+      const response = await fetch(`/api/auth/${authMode}`, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ name: authName, email: authEmail, password: authPassword }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Request failed.');
+      setAuthMessage(result.message || `Signed in as ${result.user?.email || authEmail}.`);
+      if (authMode === 'signup') { setAuthMode('login'); setAuthPassword(''); }
+      else { setAuthPassword(''); }
+    } catch (error) { setAuthMessage(error.message || 'Could not connect to the account service.'); }
+    finally { setAuthBusy(false); }
+  };
+
+  const loadProperties = async () => {
+    setPropertyBusy(true); setPropertyMessage('');
+    try { const response = await fetch('/api/properties'); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not load listings.'); setProperties(result.properties || []); }
+    catch (error) { setPropertyMessage(error.message || 'Could not load listings.'); }
+    finally { setPropertyBusy(false); }
+  };
+
+  const createProperty = async (event) => {
+    event.preventDefault(); setPropertyBusy(true); setPropertyMessage('');
+    const form = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+    try { const response = await fetch('/api/properties', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not save listing.'); setPropertyMessage(result.message); event.currentTarget.reset(); await loadProperties(); }
+    catch (error) { setPropertyMessage(error.message || 'Could not save listing.'); }
+    finally { setPropertyBusy(false); }
+  };
 
   const navigate = (next) => {
     setPage(next);
@@ -65,6 +102,7 @@ export default function App() {
         <div className="eyebrow">{selected.category}</div><h1>{selected.name.split(' ').slice(0, -1).join(' ')} <span>{selected.name.split(' ').slice(-1)}</span></h1>
         <p className="page-intro detail-intro">{selected.description}</p>
         <div className="detail-panel"><h2>Product capabilities</h2><ul>{selected.features.map((f) => <li key={f}>{f}</li>)}</ul><p className="notice">{selected.note}</p></div>
+        {selected.id === 'realtor' && <div className="detail-panel realtor-workspace"><h2>Property workspace</h2><p className="muted">Create property records and review published listings. New submissions are saved as drafts until publishing and verification are enabled.</p><form className="listing-form" onSubmit={createProperty}><label>Property title<input name="title" required maxLength="120" placeholder="e.g. 3-bedroom family home" /></label><label>Description<textarea name="description" required maxLength="3000" placeholder="Describe the property" /></label><label>Location<input name="location" required placeholder="City, region, country" /></label><div className="listing-fields"><label>Price<input name="price" type="number" min="1" step="0.01" required placeholder="Price" /></label><label>Currency<select name="currency"><option value="USD">USD</option><option value="NGN">NGN</option><option value="GBP">GBP</option><option value="EUR">EUR</option></select></label></div><div className="listing-fields"><label>Property type<select name="property_type"><option>House</option><option>Apartment</option><option>Land</option><option>Commercial</option></select></label><label>Bedrooms<input name="bedrooms" type="number" min="0" defaultValue="0" /></label><label>Bathrooms<input name="bathrooms" type="number" min="0" defaultValue="0" /></label></div><label>Image URL (optional)<input name="image_url" type="url" placeholder="https://…" /></label><button className="primary-button" disabled={propertyBusy}>{propertyBusy ? 'Saving…' : 'Save property draft'}</button></form><div className="listing-results"><div className="listing-results-head"><h3>Published listings</h3><button className="outline-button" type="button" onClick={loadProperties} disabled={propertyBusy}>{propertyBusy ? 'Loading…' : 'Refresh'}</button></div>{propertyMessage && <p className="notice" role="status">{propertyMessage}</p>}{properties.length ? properties.map((item) => <article className="listing-item" key={item.id}><b>{item.title}</b><span>{item.location} · {item.currency} {Number(item.price).toLocaleString()}</span></article>) : <p className="muted">No published properties are available yet.</p>}</div></div>}
         <p className="muted detail-footnote">Product information is available now. Live integrations, data storage, payments and account access must be configured before those services can be used.</p>
       </section>}
 
@@ -72,7 +110,7 @@ export default function App() {
 
       {page === 'account' && <section className="auth-layout">
         <div className="auth-info"><div className="eyebrow">GHOSTWIRE AI ACCOUNT</div><h1>ACCOUNT<br /><span>ACCESS.</span></h1><p>Account registration and sign-in are not enabled yet. We will not pretend to create an account or tell you that a login succeeded when no authentication service is connected.</p><div className="auth-decoration">GW<span>.</span></div></div>
-        <div className="auth-card"><div className="eyebrow">AUTHENTICATION SETUP</div><h2>{authMode === 'login' ? 'Sign-in is not connected' : 'Registration is not connected'}</h2><p className="muted">The current repository has no authentication provider, user database or session service configured.</p><div className="setup-list"><p><b>Required before launch</b></p><ul><li>Cloudflare-backed user database</li><li>Secure password hashing and session handling</li><li>Password recovery and account protection</li></ul></div><button className="primary-button full-width" onClick={() => navigate('products')}>Explore products instead</button><div className="auth-switch">{authMode === 'login' ? 'Need an account? ' : 'Already registered? '}<button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}>{authMode === 'login' ? 'Registration status' : 'Login status'}</button></div></div>
+        <div className="auth-card"><div className="eyebrow">GHOSTWIRE ACCOUNT</div><h2>{authMode === 'login' ? 'Welcome back.' : 'Create your account.'}</h2><p className="muted">Secure account access is provided by the Ghostwire Worker API. Passwords must be at least 12 characters.</p><form className="listing-form" onSubmit={submitAuth}>{authMode === 'signup' && <label>Full name<input value={authName} onChange={(e) => setAuthName(e.target.value)} autoComplete="name" required minLength="2" maxLength="80" /></label>}<label>Email address<input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="email" required /></label><label>Password<input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength="12" maxLength="128" required /></label><button className="primary-button full-width" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'login' ? 'Sign in' : 'Create account'}</button></form>{authMessage && <p className="notice" role="status">{authMessage}</p>}<div className="auth-switch">{authMode === 'login' ? 'Need an account? ' : 'Already have an account? '}<button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthMessage(''); }}>{authMode === 'login' ? 'Create account' : 'Sign in'}</button></div></div>
       </section>}
     </main>
 
