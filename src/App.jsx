@@ -41,9 +41,10 @@ export default function App() {
 
   const createProperty = async (event) => {
     event.preventDefault(); setPropertyBusy(true); setPropertyMessage('');
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = Object.fromEntries(form.entries());
-    try { const response = await fetch('/api/properties', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not save listing.'); setPropertyMessage(result.message); event.currentTarget.reset(); await loadProperties(); }
+    try { const response = await fetch('/api/properties', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not save listing.'); setPropertyMessage(result.message); formElement.reset(); await loadProperties(); }
     catch (error) { setPropertyMessage(error.message || 'Could not save listing.'); }
     finally { setPropertyBusy(false); }
   };
