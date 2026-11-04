@@ -27,6 +27,14 @@ Then deploy with the existing Cloudflare build settings:
 - Deploy command: `npx wrangler deploy`
 - Assets directory: `./dist`
 
+## Grok API secret
+
+Ghostwire Assistant uses the xAI Chat Completions endpoint with model `grok-4.7`. The API key is read only from the Worker secret `XAI_API_KEY`; never place it in frontend code, `.env` files committed to Git, or `wrangler.jsonc`.
+
+In the Cloudflare dashboard, open the `ghostwire-ai` Worker, go to Settings → Variables and Secrets, add a secret named `XAI_API_KEY`, paste the xAI API key as its value, and save. Redeploy the Worker after adding the secret. The optional Worker variable `XAI_MODEL` can override the default model, but is not required.
+
+The assistant endpoint is `POST /api/assistant/chat`. It requires a signed-in account and accepts recent user/assistant messages. xAI API usage may incur charges according to your xAI account and model pricing. Official API reference: https://docs.x.ai/developers/rest-api-reference/inference/chat-completions
+
 ## API endpoints
 
 - `GET /api/health`
