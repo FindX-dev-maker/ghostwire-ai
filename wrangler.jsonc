@@ -8,5 +8,13 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ghostwire-ai-db",
+      "database_id": "4d2842fb-b0b2-4f2e-98c6-45ec516a2232",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
