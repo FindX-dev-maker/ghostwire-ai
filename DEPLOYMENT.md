@@ -4,32 +4,28 @@ Ghostwire AI is the software division of Ghostwire Syndicate. The product areas 
 
 ## What is in this branch
 
-- Vite + React static frontend served through Cloudflare Workers Static Assets.
+- Vite + React frontend served through Cloudflare Workers Static Assets.
 - Worker API routes for account registration, sign-in, sign-out, current session and property listings.
-- D1 migration for users, hashed-password credentials, sessions and property records.
-- Property listings are saved as drafts; publishing and public marketplace moderation are intentionally not enabled yet.
+- Cloudflare D1 schema for users, hashed-password credentials, sessions and property records.
+- Property submissions are saved as drafts. Public publishing and marketplace moderation are not implemented yet.
 
-## Required Cloudflare setup
+## Cloudflare configuration
 
-The API requires a Cloudflare D1 database. The Worker returns an explicit 503 until the database binding exists; it does not fake successful registration or listing creation. The D1 binding is intentionally not included in `wrangler.jsonc` yet, so the frontend/Worker can deploy without an invented database ID.
+The Worker uses the D1 binding named `DB`. The repository's `wrangler.jsonc` already contains the `ghostwire-ai-db` binding and the database ID supplied for this project. Do not create another database or replace that ID unless the database itself is changed.
 
-1. In Cloudflare, open **Storage & databases → D1 SQL Database** and create a database named `ghostwire-ai-db`.
-2. Copy its database ID.
-3. Add this D1 binding under the top-level `d1_databases` key in `wrangler.jsonc`, replacing `YOUR_REAL_DATABASE_ID` with the ID Cloudflare gives you:
+The initial schema is in `migrations/0001_initial.sql`. It creates tables and indexes with `IF NOT EXISTS`, so applying it after the same SQL was already run manually in the Cloudflare D1 console will not recreate or erase those tables.
 
-```jsonc
-"d1_databases": [{
-  "binding": "DB",
-  "database_name": "ghostwire-ai-db",
-  "database_id": "YOUR_REAL_DATABASE_ID",
-  "migrations_dir": "migrations"
-}]
+To register the migration in Wrangler's migration history and ensure the remote database has the schema, run this from the repository:
+
+```sh
+npx wrangler d1 migrations apply ghostwire-ai-db --remote
 ```
 
-4. Run `npx wrangler d1 migrations apply ghostwire-ai-db --remote` from the repository.
-5. Deploy using the existing production build settings: `npm run build`, then `npx wrangler deploy`.
+Then deploy with the existing Cloudflare build settings:
 
-For local development, use `npx wrangler d1 migrations apply ghostwire-ai-db --local`.
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Assets directory: `./dist`
 
 ## API endpoints
 
@@ -44,6 +40,6 @@ For local development, use `npx wrangler d1 migrations apply ghostwire-ai-db --l
 
 Passwords are PBKDF2-SHA-256 hashed with per-user salts. Session tokens are random, stored only as SHA-256 hashes and sent in Secure, HttpOnly, SameSite=Lax cookies.
 
-## Not yet connected
+## Not yet implemented
 
-Trading execution, live AI model providers, email verification, password-reset delivery, billing/subscriptions, file uploads, property publication and admin moderation still require provider configuration and further implementation. No API keys or credentials are embedded in this repository.
+Trading execution, live AI model-provider connections, email verification, password-reset delivery, billing/subscriptions, property image uploads, public property publishing, buyer/seller enquiry workflows and admin moderation still require further implementation and provider configuration. The current Realtor workflow stores authenticated property submissions as drafts; it is not yet a public property marketplace. No API keys or credentials are embedded in this repository.
