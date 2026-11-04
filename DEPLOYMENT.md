@@ -11,11 +11,21 @@ Ghostwire AI is the software division of Ghostwire Syndicate. The product areas 
 
 ## Required Cloudflare setup
 
-The API requires a Cloudflare D1 database. The Worker returns an explicit 503 until the database binding exists; it does not fake successful registration or listing creation.
+The API requires a Cloudflare D1 database. The Worker returns an explicit 503 until the database binding exists; it does not fake successful registration or listing creation. The D1 binding is intentionally not included in `wrangler.jsonc` yet, so the frontend/Worker can deploy without an invented database ID.
 
 1. In Cloudflare, open **Storage & databases → D1 SQL Database** and create a database named `ghostwire-ai-db`.
 2. Copy its database ID.
-3. Replace `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID` in `wrangler.jsonc` with that ID.
+3. Add this D1 binding under the top-level `d1_databases` key in `wrangler.jsonc`, replacing `YOUR_REAL_DATABASE_ID` with the ID Cloudflare gives you:
+
+```jsonc
+"d1_databases": [{
+  "binding": "DB",
+  "database_name": "ghostwire-ai-db",
+  "database_id": "YOUR_REAL_DATABASE_ID",
+  "migrations_dir": "migrations"
+}]
+```
+
 4. Run `npx wrangler d1 migrations apply ghostwire-ai-db --remote` from the repository.
 5. Deploy using the existing production build settings: `npm run build`, then `npx wrangler deploy`.
 
