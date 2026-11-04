@@ -29,11 +29,11 @@ Then deploy with the existing Cloudflare build settings:
 
 ## Grok API secret
 
-Ghostwire Assistant uses the Groq Chat Completions endpoint with model `grok-4.7`. The API key is read only from the Worker secret `GROQ_API_KEY`; never place it in frontend code, `.env` files committed to Git, or `wrangler.jsonc`.
+Ghostwire Assistant uses the Groq Chat Completions endpoint with model `openai/gpt-oss-120b`. The API key is read only from the Worker secret `GROQ_API_KEY`; never place it in frontend code, `.env` files committed to Git, or `wrangler.jsonc`.
 
-In the Cloudflare dashboard, open the `ghostwire-ai` Worker, go to Settings → Variables and Secrets, add a secret named `GROQ_API_KEY`, paste the xAI API key as its value, and save. Redeploy the Worker after adding the secret. The optional Worker variable `GROQ_MODEL` can override the default model, but is not required.
+In the Cloudflare dashboard, open the `ghostwire-ai` Worker, go to Settings → Variables and Secrets, add a secret named `GROQ_API_KEY`, paste your newly generated Groq API key as its value, and save. Redeploy the Worker after adding the secret. The optional Worker variable `GROQ_MODEL` can override the default model, but is not required.
 
-The assistant endpoint is `POST /api/assistant/chat`. It requires a signed-in account and accepts recent user/assistant messages. Groq API usage may incur charges according to your xAI account and model pricing. Official API reference: https://console.groq.com/docs/api-reference#chat-create
+The assistant endpoint is `POST /api/assistant/chat`. It requires a signed-in account and accepts recent user/assistant messages. Groq API usage may incur charges according to your Groq account, model and usage limits. Official API reference: https://console.groq.com/docs/api-reference#chat-create
 
 ## API endpoints
 
