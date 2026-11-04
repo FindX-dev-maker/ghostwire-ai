@@ -100,7 +100,7 @@ export default {
           method: "POST",
           headers: { "authorization": `Bearer ${env.GROQ_API_KEY}`, "content-type": "application/json" },
           body: JSON.stringify({
-            model: env.GROQ_MODEL || "llama-3.3-70b-versatile",
+            model: env.GROQ_MODEL || "openai/gpt-oss-120b",
             messages: [
               { role: "system", content: "You are Ghostwire Assistant, the official AI assistant inside Ghostwire AI, a software division of Ghostwire Syndicate. Be helpful, accurate, practical and clear. Do not claim to execute trades, move money, access accounts, publish properties or perform external actions unless an enabled tool actually does so. For financial topics, explain risks and never promise returns." },
               ...messages
@@ -121,7 +121,7 @@ export default {
         }
         const answer = result.choices?.[0]?.message?.content;
         if (typeof answer !== "string" || !answer.trim()) return json({ error: "Groq returned an empty response. Please try again." }, 502);
-        return json({ answer: answer.trim(), model: result.model || env.GROQ_MODEL || "llama-3.3-70b-versatile" });
+        return json({ answer: answer.trim(), model: result.model || env.GROQ_MODEL || "openai/gpt-oss-120b" });
       } catch (error) {
         return json({ error: error?.name === "TimeoutError" ? "Grok took too long to respond. Please try again." : "Could not reach the Groq API. Check the Worker network request and try again." }, 502);
       }
