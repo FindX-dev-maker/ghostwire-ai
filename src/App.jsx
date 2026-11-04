@@ -67,6 +67,10 @@ export default function App() {
     finally { setPropertyBusy(false); }
   };
 
+  useEffect(() => {
+    if (page === 'realtor') loadProperties();
+  }, [page]);
+
   const createProperty = async (event) => {
     event.preventDefault(); setPropertyBusy(true); setPropertyMessage('');
     const formElement = event.currentTarget;
